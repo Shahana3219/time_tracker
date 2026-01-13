@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '/models/time_entry.dart';
-import '/providers/time_entry_provider.dart';
+import '/provider/time_entry_provider.dart';
 
 class AddTimeEntryScreen extends StatefulWidget {
   @override
@@ -10,8 +10,9 @@ class AddTimeEntryScreen extends StatefulWidget {
 
 class _AddTimeEntryScreenState extends State<AddTimeEntryScreen> {
   final _formKey = GlobalKey<FormState>();
-  String projectId = 'Project 1';
-  String taskId = 'Task 1';
+  String? projectId;
+  String? taskId;
+
   double totalTime = 0.0;
   DateTime date = DateTime.now();
   String notes = '';
@@ -27,7 +28,9 @@ class _AddTimeEntryScreenState extends State<AddTimeEntryScreen> {
         child: Column(
             children: <Widget>[
             DropdownButtonFormField<String>(
-                value: projectId,
+  value: projectId,
+  hint: const Text('Select Project'),
+
                 onChanged: (String? newValue) {
                 setState(() {
                     projectId = newValue!;
@@ -43,7 +46,9 @@ class _AddTimeEntryScreenState extends State<AddTimeEntryScreen> {
                 }).toList(),
             ),
             DropdownButtonFormField<String>(
-                value: taskId,
+  value: taskId,
+  hint: const Text('Select Task'),
+
                 onChanged: (String? newValue) {
                 setState(() {
                     taskId = newValue!;
@@ -89,8 +94,9 @@ class _AddTimeEntryScreenState extends State<AddTimeEntryScreen> {
                     Provider.of<TimeEntryProvider>(context, listen: false)
                         .addTimeEntry(TimeEntry(
                         id: DateTime.now().toString(), // Simple ID generation
-                        projectId: projectId,
-                        taskId: taskId,
+                       projectId: projectId!,
+                        taskId: taskId!,
+
                         totalTime: totalTime,
                         date: date,
                         notes: notes,
