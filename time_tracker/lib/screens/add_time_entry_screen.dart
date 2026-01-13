@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '/models/time_entry.dart';
 import '/provider/time_entry_provider.dart';
+import '/provider/project_task_provider.dart';
+
 
 class AddTimeEntryScreen extends StatefulWidget {
   @override
@@ -12,13 +14,47 @@ class _AddTimeEntryScreenState extends State<AddTimeEntryScreen> {
   final _formKey = GlobalKey<FormState>();
   String? projectId;
   String? taskId;
-
   double totalTime = 0.0;
   DateTime date = DateTime.now();
   String notes = '';
 
   @override
   Widget build(BuildContext context) {
+    final timeEntryProvider = Provider.of<TimeEntryProvider>(context);
+    final projectTaskProvider = Provider.of<ProjectTaskProvider>(context);
+    
+    // Get all projects from user-added and from time entries
+    final userProjectNames = projectTaskProvider.getProjectNames();
+    final timeEntryProjectNames = timeEntryProvider.entries
+        .map((entry) => entry.projectId)
+        .toSet()
+        .toList();
+    
+    // Merge projects, avoiding duplicates
+    final allProjects = <String>[];
+    allProjects.addAll(userProjectNames);
+    for (var name in timeEntryProjectNames) {
+      if (!allProjects.contains(name)) {
+        allProjects.add(name);
+      }
+    }
+    
+    // Get all tasks from user-added and from time entries
+    final userTaskNames = projectTaskProvider.getTaskNames();
+    final timeEntryTaskNames = timeEntryProvider.entries
+        .map((entry) => entry.taskId)
+        .toSet()
+        .toList();
+    
+    // Merge tasks, avoiding duplicates
+    final allTasks = <String>[];
+    allTasks.addAll(userTaskNames);
+    for (var name in timeEntryTaskNames) {
+      if (!allTasks.contains(name)) {
+        allTasks.add(name);
+      }
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -47,7 +83,7 @@ class _AddTimeEntryScreenState extends State<AddTimeEntryScreen> {
                   hint: const Text('Select Project'),
                   onChanged: (String? newValue) {
                     setState(() {
-                      projectId = newValue!;
+                      projectId = newValue;
                     });
                   },
                   decoration: _buildInputDecoration(
@@ -55,15 +91,25 @@ class _AddTimeEntryScreenState extends State<AddTimeEntryScreen> {
                     Icons.business,
                     Color(0xFF8B5CF6),
                   ),
-                  items: <String>['Project 1', 'Project 2', 'Project 3']
-                      .map<DropdownMenuItem<String>>((String value) {
-                    return DropdownMenuItem<String>(
-                      value: value,
-                      child: Text(value),
-                    );
-                  }).toList(),
+                  items: allProjects.isEmpty
+                      ? [
+                          DropdownMenuItem<String>(
+                            value: null,
+                            child: const Text('No projects yet'),
+                          )
+                        ]
+                      : allProjects
+                          .map<DropdownMenuItem<String>>((String value) {
+                            return DropdownMenuItem<String>(
+                              value: value,
+                              child: Text(value),
+                            );
+                          }).toList(),
+                  validator: (value) =>
+                      value == null || value.isEmpty ? 'Select a project' : null,
                 ),
               ),
+
               SizedBox(height: 16),
               _buildFormCard(
                 child: DropdownButtonFormField<String>(
@@ -79,13 +125,20 @@ class _AddTimeEntryScreenState extends State<AddTimeEntryScreen> {
                     Icons.task,
                     Color(0xFF06B6D4),
                   ),
-                  items: <String>['Task 1', 'Task 2', 'Task 3']
-                      .map<DropdownMenuItem<String>>((String value) {
-                    return DropdownMenuItem<String>(
-                      value: value,
-                      child: Text(value),
-                    );
-                  }).toList(),
+                  items: allTasks.isEmpty
+                      ? [
+                          DropdownMenuItem<String>(
+                            value: null,
+                            child: const Text('No tasks yet'),
+                          )
+                        ]
+                      : allTasks
+                          .map<DropdownMenuItem<String>>((String value) {
+                            return DropdownMenuItem<String>(
+                              value: value,
+                              child: Text(value),
+                            );
+                          }).toList(),
                 ),
               ),
               SizedBox(height: 16),

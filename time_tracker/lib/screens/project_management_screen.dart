@@ -1,14 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../provider/time_entry_provider.dart';
+import '../provider/project_task_provider.dart';
+import '../dialogs/add_project_dialog.dart';
 
-class ProjectManagementScreen extends StatelessWidget {
-  final List<Map<String, dynamic>> sampleProjects = [
-    {'name': 'Mobile App', 'color': Color(0xFFFF6B6B), 'icon': Icons.mobile_friendly},
-    {'name': 'Web Design', 'color': Color(0xFF4ECDC4), 'icon': Icons.web},
-    {'name': 'Backend API', 'color': Color(0xFFFFE66D), 'icon': Icons.storage},
-  ];
+// Helper to convert hex string to Color
+Color _hexToColor(dynamic color) {
+  if (color is Color) return color;
+  if (color is String) {
+    return Color(int.parse(color.replaceFirst('#', '0x')));
+  }
+  return Colors.grey;
+}
 
+
+class ProjectManagementScreen extends StatefulWidget {
+  @override
+  _ProjectManagementScreenState createState() => _ProjectManagementScreenState();
+}
+
+class _ProjectManagementScreenState extends State<ProjectManagementScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -20,96 +31,185 @@ class ProjectManagementScreen extends StatelessWidget {
         centerTitle: true,
         elevation: 0,
       ),
-      body: Container(
+      body: Consumer2<ProjectTaskProvider, TimeEntryProvider>(
+        builder: (context, projectTaskProvider, timeEntryProvider, child) {
+          // Combine user-added projects with projects from time entries
+          final userProjects = projectTaskProvider.projects;
+          final timeEntryProjectNames = timeEntryProvider.entries
+              .map((entry) => entry.projectId)
+              .toSet()
+              .toList();
+          
+          // Merge both lists, avoiding duplicates
+          final allProjects = [...userProjects];
+          for (var projectName in timeEntryProjectNames) {
+            if (!allProjects.any((p) => p['name'] == projectName)) {
+              allProjects.add({
+                'name': projectName,
+                'color': Colors.primaries[timeEntryProjectNames.indexOf(projectName) % Colors.primaries.length],
+              });
+            }
+          }
+
+          return Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFFF0FDF4), Color(0xFFDCFCE7)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+            child: allProjects.isEmpty
+                ? const Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.folder_off, size: 80, color: Colors.grey),
+                        SizedBox(height: 16),
+                        Text(
+                          'No projects yet',
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                        SizedBox(height: 8),
+                        Text('Add a project when creating a time entry'),
+                      ],
+                    ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: allProjects.length,
+                    itemBuilder: (context, index) {
+                      final project = allProjects[index];
+                      return _buildProjectListItem(project);
+                    },
+                  ),
+          );
+        },
+      ),
+      floatingActionButton: FloatingActionButton(
+  onPressed: () async {
+    final newProjectName = await showAddProjectDialog(context);
+    if (newProjectName != null && newProjectName.isNotEmpty) {
+      final projectTaskProvider = Provider.of<ProjectTaskProvider>(context, listen: false);
+      await projectTaskProvider.addProject({
+        'name': newProjectName,
+        'color': Colors.primaries[projectTaskProvider.projects.length % Colors.primaries.length],
+      });
+    }
+  },
+  child: const Icon(Icons.add, size: 28),
+  tooltip: 'Add Project',
+),
+
+    );
+  }
+
+  Widget _buildProjectListItem(Map<String, dynamic> project) {
+    return Card(
+      elevation: 4,
+      margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Container(
         decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
           gradient: LinearGradient(
-            colors: [Color(0xFFF0FDF4), Color(0xFFDCFCE7)],
+            colors: [
+              _hexToColor(project['color']),
+              _hexToColor(project['color']).withOpacity(0.7)
+            ],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
         ),
-        child: Consumer<TimeEntryProvider>(
-          builder: (context, provider, child) {
-            return GridView.builder(
-              padding: const EdgeInsets.all(16),
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-                childAspectRatio: 0.85,
-              ),
-              itemCount: sampleProjects.length,
-              itemBuilder: (context, index) {
-                final project = sampleProjects[index];
-                return _buildProjectCard(project);
-              },
-            );
-          },
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('Project creation coming soon!'),
-              backgroundColor: Color(0xFF10B981),
-              duration: Duration(seconds: 2),
+        child: ListTile(
+          leading: Icon(
+            project['icon'],
+            size: 32,
+            color: Colors.white,
+          ),
+          title: Text(
+            project['name'],
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+              fontSize: 16,
             ),
-          );
-        },
-        child: const Icon(Icons.add, size: 28),
-        tooltip: 'Add Project',
+          ),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.edit, color: Colors.white, size: 20),
+                onPressed: () => _editProject(project),
+              ),
+              IconButton(
+                icon: const Icon(Icons.delete, color: Colors.white70, size: 20),
+                onPressed: () => _deleteProject(project),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
 
-  Widget _buildProjectCard(Map<String, dynamic> project) {
-    return Card(
-      elevation: 6,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          gradient: LinearGradient(
-            colors: [project['color'], project['color'].withOpacity(0.7)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+  void _editProject(Map<String, dynamic> project) {
+    final controller = TextEditingController(text: project['name']);
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Edit Project'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            labelText: 'Project Name',
+            border: OutlineInputBorder(),
           ),
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              project['icon'],
-              size: 48,
-              color: Colors.white,
-            ),
-            SizedBox(height: 16),
-            Text(
-              project['name'],
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-            SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                IconButton(
-                  icon: Icon(Icons.edit, color: Colors.white, size: 20),
-                  onPressed: () {},
-                ),
-                IconButton(
-                  icon: Icon(Icons.delete, color: Colors.white70, size: 20),
-                  onPressed: () {},
-                ),
-              ],
-            ),
-          ],
-        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              if (controller.text.isNotEmpty) {
+                final updated = {...project, 'name': controller.text};
+                Provider.of<ProjectTaskProvider>(context, listen: false)
+                    .updateProject(project, updated);
+                Navigator.pop(context);
+              }
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _deleteProject(Map<String, dynamic> project) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Project'),
+        content: Text('Delete "${project['name']}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Provider.of<ProjectTaskProvider>(context, listen: false)
+                  .deleteProject(project);
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Project deleted'), duration: Duration(seconds: 2)),
+              );
+            },
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
       ),
     );
   }

@@ -13,4 +13,23 @@ class TimeEntry {
     required this.date,
     required this.notes,
   });
+   Map<String, dynamic> toJson() => {
+        'id': id,
+        'projectId': projectId,
+        'taskId': taskId,
+        'totalTime': totalTime,
+        'date': date.toIso8601String(),
+        'notes': notes,
+      };
+
+  factory TimeEntry.fromJson(Map<String, dynamic> json) {
+    return TimeEntry(
+      id: json['id'],
+      projectId: json['projectId'],
+      taskId: json['taskId'],
+      totalTime: json['totalTime'],
+      date: DateTime.parse(json['date']),
+      notes: json['notes'],
+    );
+  }
 }

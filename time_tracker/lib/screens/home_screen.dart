@@ -1,181 +1,264 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '/provider/time_entry_provider.dart';
+import '../provider/time_entry_provider.dart';
 import 'add_time_entry_screen.dart';
+import 'project_management_screen.dart';
+import 'task_management_screen.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final colors = [
-      Color(0xFFFF6B6B),
-      Color(0xFF4ECDC4),
-      Color(0xFFFFE66D),
-      Color(0xFF95E1D3),
-      Color(0xFFF38181),
-      Color(0xFFAA96DA),
-    ];
+    final provider = Provider.of<TimeEntryProvider>(context);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text(
           'Time Tracker',
-          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          style: TextStyle(fontWeight: FontWeight.bold),
         ),
-        centerTitle: true,
-        elevation: 0,
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: const [
+            Tab(
+              child: Text(
+                'All Entries',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+            Tab(
+              child: Text(
+                'Group by Project',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFFF8FAFC), Color(0xFFE0E7FF)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Consumer<TimeEntryProvider>(
-            builder: (context, provider, child) {
-              if (provider.entries.isEmpty) {
-                return Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.timer_off,
-                        size: 80,
-                        color: Color(0xFF6366F1),
-                      ),
-                      SizedBox(height: 16),
-                      Text(
-                        'No time entries yet',
-                        style: TextStyle(
-                          fontSize: 18,
-                          color: Color(0xFF4B5563),
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      SizedBox(height: 8),
-                      Text(
-                        'Start tracking your time!',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Color(0xFF8892B0),
-                        ),
-                      ),
-                    ],
+
+      /* =======================
+         HAMBURGER MENU (menu.png)
+         ======================= */
+      drawer: Drawer(
+        child: ListView(
+          children: [
+            const DrawerHeader(
+              decoration: BoxDecoration(color: Color(0xFF6366F1)),
+              child: Text(
+                'Time Tracker',
+                style: TextStyle(color: Colors.white, fontSize: 22),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.folder),
+              title: const Text('Projects'),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ProjectManagementScreen(),
                   ),
                 );
-              }
-
-              return ListView.builder(
-                itemCount: provider.entries.length,
-                itemBuilder: (context, index) {
-                  final entry = provider.entries[index];
-                  final color = colors[index % colors.length];
-
-                  return Card(
-                    elevation: 6,
-                    margin: const EdgeInsets.only(bottom: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(16),
-                        gradient: LinearGradient(
-                          colors: [color.withOpacity(0.9), color.withOpacity(0.7)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                      ),
-                      child: ListTile(
-                        contentPadding: const EdgeInsets.all(16),
-                        title: Text(
-                          entry.projectId,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
-                            color: Colors.white,
-                          ),
-                        ),
-                        subtitle: Padding(
-                          padding: const EdgeInsets.only(top: 12),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _buildEntryField(
-                                'Task',
-                                entry.taskId,
-                              ),
-                              SizedBox(height: 6),
-                              _buildEntryField(
-                                'Hours',
-                                '${entry.totalTime}h',
-                              ),
-                              SizedBox(height: 6),
-                              _buildEntryField(
-                                'Date',
-                                entry.date.toLocal().toString().split(' ')[0],
-                              ),
-                              if (entry.notes.isNotEmpty) ...[SizedBox(height: 6), _buildEntryField('Notes', entry.notes)],
-                            ],
-                          ),
-                        ),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.delete, color: Colors.white),
-                          onPressed: () {
-                            Provider.of<TimeEntryProvider>(
-                              context,
-                              listen: false,
-                            ).deleteTimeEntry(entry.id);
-                          },
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              );
-            },
-          ),
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.task),
+              title: const Text('Tasks'),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => TaskManagementScreen(),
+                  ),
+                );
+              },
+            ),
+          ],
         ),
       ),
+
+      /* =======================
+         BODY
+         ======================= */
+      body: provider.entries.isEmpty
+          ? _buildEmptyState()
+          : TabBarView(
+              controller: _tabController,
+              children: [
+                _buildAllEntries(provider),
+                _buildGroupedEntries(provider),
+              ],
+            ),
+
+      /* =======================
+         ADD ENTRY BUTTON
+         ======================= */
       floatingActionButton: FloatingActionButton(
+        child: const Icon(Icons.add),
         onPressed: () {
           Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => AddTimeEntryScreen()),
           );
         },
-        child: const Icon(Icons.add, size: 28),
-        tooltip: 'Add Time Entry',
       ),
     );
   }
 
-  Widget _buildEntryField(String label, String value) {
-    return Row(
-      children: [
-        Text(
-          '$label: ',
-          style: const TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: Colors.white70,
+  /* =======================
+     EMPTY STATE (home-empty.png)
+     ======================= */
+  Widget _buildEmptyState() {
+    return const Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.timer_off, size: 80, color: Colors.grey),
+          SizedBox(height: 16),
+          Text(
+            'No time entries yet',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
-        ),
-        Flexible(
-          child: Text(
-            value,
-            style: const TextStyle(
-              fontSize: 12,
-              color: Colors.white,
-              fontWeight: FontWeight.w500,
+          SizedBox(height: 8),
+          Text('Tap + to add your first entry'),
+        ],
+      ),
+    );
+  }
+
+  /* =======================
+     ALL ENTRIES (home-entries.png)
+     DELETE → entry-delete.png
+     ======================= */
+  Widget _buildAllEntries(TimeEntryProvider provider) {
+    return ListView.builder(
+      padding: const EdgeInsets.all(12),
+      itemCount: provider.entries.length,
+      itemBuilder: (context, index) {
+        final entry = provider.entries[index];
+
+        return Dismissible(
+          key: ValueKey(entry.id),
+          background: Container(
+            color: Colors.red,
+            alignment: Alignment.centerRight,
+            padding: const EdgeInsets.only(right: 20),
+            child: const Icon(Icons.delete_outline, color: Colors.white, size: 28),
+          ),
+          direction: DismissDirection.endToStart,
+          onDismissed: (_) {
+            provider.deleteTimeEntry(entry.id);
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Entry deleted'), duration: Duration(seconds: 2)),
+            );
+          },
+          child: Card(
+            elevation: 4,
+            margin: const EdgeInsets.only(bottom: 12),
+            child: ListTile(
+              title: Text(
+                entry.projectId,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              subtitle: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Task: ${entry.taskId}'),
+                  Text('Hours: ${entry.totalTime}'),
+                  Text(
+                    'Date: ${entry.date.toLocal().toString().split(' ')[0]}',
+                  ),
+                  if (entry.notes.isNotEmpty)
+                    Text('Notes: ${entry.notes}'),
+                ],
+              ),
+              trailing: IconButton(
+                icon: const Icon(Icons.delete_outline, color: Colors.red),
+                tooltip: 'Delete entry',
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text('Delete Entry'),
+                      content: Text('Delete "${entry.projectId}" entry?'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('Cancel'),
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            provider.deleteTimeEntry(entry.id);
+                            Navigator.pop(context);
+                          },
+                          child: const Text('Delete', style: TextStyle(color: Colors.red)),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
             ),
-            overflow: TextOverflow.ellipsis,
           ),
-        ),
-      ],
+        );
+      },
+    );
+  }
+
+  /* =======================
+     GROUPED VIEW (home-entries-group.png)
+     ======================= */
+  Widget _buildGroupedEntries(TimeEntryProvider provider) {
+    final grouped = <String, List<dynamic>>{};
+
+    for (var entry in provider.entries) {
+      grouped.putIfAbsent(entry.projectId, () => []).add(entry);
+    }
+
+    return ListView(
+      children: grouped.entries.map((group) {
+        return ExpansionTile(
+          title: Text(
+            group.key,
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+          children: group.value.map((entry) {
+            return ListTile(
+              title: Text(entry.taskId),
+              subtitle: Text(
+                '${entry.totalTime} hrs • ${entry.date.toLocal().toString().split(' ')[0]}',
+              ),
+            );
+          }).toList(),
+        );
+      }).toList(),
     );
   }
 }
