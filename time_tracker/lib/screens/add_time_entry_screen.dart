@@ -127,6 +127,32 @@ class _AddTimeEntryScreenState extends State<AddTimeEntryScreen> {
                   onSaved: (value) => notes = value!,
                 ),
               ),
+              SizedBox(height: 16),
+
+_buildFormCard(
+  child: ListTile(
+    leading: Icon(Icons.calendar_today, color: Color(0xFF6366F1)),
+    title: Text(
+      'Date: ${date.toLocal().toString().split(' ')[0]}',
+      style: const TextStyle(fontSize: 16),
+    ),
+    trailing: const Icon(Icons.edit_calendar),
+    onTap: () async {
+      final picked = await showDatePicker(
+        context: context,
+        initialDate: date,
+        firstDate: DateTime(2020),
+        lastDate: DateTime(2030),
+      );
+      if (picked != null) {
+        setState(() {
+          date = picked;
+        });
+      }
+    },
+  ),
+),
+
               SizedBox(height: 24),
               Container(
                 decoration: BoxDecoration(
